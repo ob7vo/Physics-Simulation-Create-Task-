@@ -10,13 +10,13 @@ namespace Physics_Simulation__Create_Task_
 
     internal class Ball
     {
-        Vector2 position;
-        Vector2 velocity;
+        Vector2 position = new Vector2(0,0);
+        Vector2 velocity = new Vector2(0,0);
 
-        float radius;
-        float mass;
+        float radius = 5.f;
+        float mass = 3.f;
 
-        bool grounded;
+        bool grounded = false;
 
         public Ball(Vector2 position, Vector2 velocity, float radius, float mass)
         {
