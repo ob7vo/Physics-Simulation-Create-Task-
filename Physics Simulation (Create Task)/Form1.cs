@@ -50,33 +50,16 @@ namespace Physics_Simulation__Create_Task_
         public void SpawnBall(Vector2 mousePos, int newRadius, int newMass) {
             // Called on mouse press and spawns on the mouse
             // Return if there are no Balls left
-
+            if (!IsAvailableBall()) return;
             // Activate Balls will make sure there is a ball with a valid spawn
-            int idx = ActivateBall(mousePos);
-            if (idx == -1) return; // There are no balls available to spawn
-
-            // Set the balls new stats before checking if its in a valid spawn (mass techinically doesnt serve that purpose)
-            balls[idx].position = mousePos;
-            balls[idx].radius = newRadius;
-            balls[idx].mass = newMass;
-            
+        
+            Vector2 velocity;
             if (!useMouseVelocity) balls[idx].velocity = ballLaunchVelocity;
             else balls[idx].velocity = mousePos - lastMousePos;
-        }
-        public int ActivateBall() {
-            // Finds an inactive ball to spawn in
-            // If there are no inactive balls, it returns -1 so its known 
-            // thats why I return an int and not a reference, I also just don't like pointers
 
-            for (int i = 0; i < MAX_BALLS; i++) {
-                if (!activeBalls[i]) {
-                    activeBalls[i] = true;
-                    return i;
-                }
-            }
-
-            return -1;
+            balls.Add(position, velocity, newRadius, newMass);
         }
+        public bool IsAvailableBall() => return balls.Count < MAX_BALLS;
         public bool isValidBallSpawnPosition(Vector2 spawnPos) {
             // Make sure a ball isn't inside a block or out of bounds before spawning it
             
@@ -88,8 +71,7 @@ namespace Physics_Simulation__Create_Task_
 
         // Blocks
         public void SpawnBlock(Vector2 mousePos) {
-            int idx = ActivateBlock();
-            if (idx == -1) return;
+            if (!isAvailableBlock()) return;
             
             // Size is the absolute distance between click and release
             Vector2 size = new Vector2(
@@ -100,19 +82,9 @@ namespace Physics_Simulation__Create_Task_
             // Position is the midpoint between the two points
             Vector2 position = (lastClickPos + mousePos) * 0.5f;
 
-            blocks[idx].position = position;
-            blocks[idx].
+            blocks.Add(position, size);
         }
-        public int ActivateBlock() {
-            // Same as ActivateBall(), just for blocks
-
-            for (int i = 0; i < BLOCKS; i++) {
-                if (!activeBlocks[i]) {
-                    activeBlocks[i] = true;
-                    return i;
-                }
-            }
-        }
+        public bool isAvailableBlock() => blocks.Count < MAX_BLOCKS;
         
         public void Draw() {
 
