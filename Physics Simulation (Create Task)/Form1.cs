@@ -6,14 +6,21 @@ namespace Physics_Simulation__Create_Task_
         const int MAX_BLOCKS = 15;
 
         // I was going to use an Object Pool (array of stored instances), but since the objects are so small, its redundent
-        private List<Ball> balls = new List<Ball>;        
-        private List<Block> blocks = new List<Block>;
+        private List<Ball> balls = new List<Ball>();     
+        private List<Block> blocks = new List<Block>();
+        private Ball dummyBall = new Ball(); // Used for drawing a ball preview before spawning one, AND checking for valid spawns
 
         private Vector2 ballLaunchVelocity = new Vector2(5,5); // Velocity balls get when spawned
         private Vector2 lastMousePos = new Vector2(0,0); // The mouse position last frame. Used fro getting mouse velocity
         private Vector2 lastClickPos = new Vector2(0,0); // The mouse position when it last clicked. Used for sizing blocks;
         private bool useMouseVelocity = false; // if true, the spawn velocity fro balls with use the mouse, and not ballLaunhVelocity
-        
+
+        float gravity = 3.0f;
+
+        // Configurations for the next ball to be spawned
+        float nextRadius = 0;
+        float nextMaxx = 0;
+       
         public Form1()
         {
             InitializeComponent();
@@ -27,46 +34,45 @@ namespace Physics_Simulation__Create_Task_
         }
         public void ProcessBalls(float dt) {
             // Process the active balls to make them move and collide
-            for (int i = 0; i < MAX_BALLS; i++) {
-                if (!activeBalls[i]) continue;
-
+            foreach (Ball ball in balls) {
                 // Move them first before checking collision, necessary fro accurate collision)
-                balls[i].Move(dt);
+                ball.Move(dt, gravity);
 
                 // Check Collision with walls first before balls (arbitrary order I chose)
-                for (int j = 0; j < MAX_BLOCKS; j++) {
-                    if (activeBlocks[j] && balls[i].Collides(blocks[j])
-                        balls[i].HandleCollision(blocks[j]);
+                foreach (Block block in blocks) {
+                    if (ball.Collides(block))
+                        ball.ResolveCollision(block);
                 }
 
                 // Check collision between other balls last
-                for (int j = 0; j < MAX_BALLS; j++) {
+                foreach (Ball ball2 in balls) {
                     // Check if (i != j) so the ball wont collide with itself
-                    if (activeBalls[j] && i != j && balls[i].Collides(balls[j]);
-                        balls[i].HandleCollision(balls[j]);
+                    if (ball != ball2 && ball.Collides(ball2))
+                        ball.ResolveCollision(ball2);
                 }
             }
         }
         public void SpawnBall(Vector2 mousePos, int newRadius, int newMass) {
             // Called on mouse press and spawns on the mouse
             // Return if there are no Balls left
-            if (!IsAvailableBall()) return;
-            // Activate Balls will make sure there is a ball with a valid spawn
-        
-            Vector2 velocity;
-            if (!useMouseVelocity) balls[idx].velocity = ballLaunchVelocity;
-            else balls[idx].velocity = mousePos - lastMousePos;
-
-            balls.Add(position, velocity, newRadius, newMass);
-        }
-        public bool IsAvailableBall() => return balls.Count < MAX_BALLS;
-        public bool isValidBallSpawnPosition(Vector2 spawnPos) {
-            // Make sure a ball isn't inside a block or out of bounds before spawning it
+            if (!IsAvailableBall() || !IsValidBallSpawnPosition()) return;
             
-            for (int j = 0; j < MAX_BLOCKS; j++) {
-                    if (activeBlocks[j] && balls[i].Collides(blocks[j])
-                        balls[i].HandleCollision(blocks[j]);
-                }
+            Vector2 velocity;
+            if (!useMouseVelocity) velocity = ballLaunchVelocity;
+            else velocity = mousePos - lastMousePos;
+
+            balls.Add(new Ball(mousePos, velocity, newRadius, newMass));
+        }
+        public bool IsAvailableBall() => balls.Count < MAX_BALLS;
+        public bool IsValidBallSpawnPosition() {
+            // Make sure a ball isn't inside a block or out of bounds before spawning it
+            foreach (Block block in blocks)
+            {
+                if (dummyBall.Collides(block))
+                    return true;
+            }
+
+            return false;
         }
 
         // Blocks
@@ -75,14 +81,14 @@ namespace Physics_Simulation__Create_Task_
             
             // Size is the absolute distance between click and release
             Vector2 size = new Vector2(
-                Mathf.Abs(lastClickPos.x - mousePos.x),
-                Mathf.Abs(lastClickPos.y - mousePos.y)
+                Math.Abs(lastClickPos.x - mousePos.x),
+                Math.Abs(lastClickPos.y - mousePos.y)
             );
         
             // Position is the midpoint between the two points
             Vector2 position = (lastClickPos + mousePos) * 0.5f;
 
-            blocks.Add(position, size);
+            blocks.Add(new Block(position, size));
         }
         public bool isAvailableBlock() => blocks.Count < MAX_BLOCKS;
         

@@ -37,6 +37,13 @@ namespace Physics_Simulation__Create_Task_
 
             return this;
         }
+        public Vector2 Abs()
+        {
+            this.x = Math.Abs(this.x);
+            this.y = Math.Abs(this.y);
+
+            return this;
+        }
         public static float Distance(Vector2 a, Vector2 b)
         {
             // Gets the distance between 2 vectors.

@@ -25,6 +25,7 @@ namespace Physics_Simulation__Create_Task_
             this.radius = radius;
             this.mass = mass;
         }
+        public Ball() { }
 
         public void Move(float deltaTime, float gravity)
         {
