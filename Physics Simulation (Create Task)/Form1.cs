@@ -6,7 +6,7 @@ namespace Physics_Simulation__Create_Task_
         const int MAX_BLOCKS = 15;
 
         // I was going to use an Object Pool (array of stored instances), but since the objects are so small, its redundent
-        private List<Ball> balls = new List<Ball>();     
+        public List<Ball> balls = new List<Ball>();     
         private List<Block> blocks = new List<Block>();
         private Ball dummyBall = new Ball(); // Used for drawing a ball preview before spawning one, AND checking for valid spawns
 
@@ -28,9 +28,8 @@ namespace Physics_Simulation__Create_Task_
         public void Tick(float dt){
 
             ProcessBalls(dt);
-            Draw();
 
-           // lastMoustPos = GetMousePos??; I'll figure this out when i get home
+           // lastMousePos = GetMousePos??; I'll figure this out when i get home
         }
         public void ProcessBalls(float dt) {
             // Process the active balls to make them move and collide
@@ -91,9 +90,16 @@ namespace Physics_Simulation__Create_Task_
             blocks.Add(new Block(position, size));
         }
         public bool isAvailableBlock() => blocks.Count < MAX_BLOCKS;
-        
-        public void Draw() {
 
+        protected override void OnPaint(PaintEventArgs e)
+        {
+
+            foreach (Ball ball in balls)
+            {
+                e.Graphics.FillEllipse(Brushes.Blue, ball.position.x - ball.radius, ball.position.y - ball.radius,
+                    ball.radius * 2, ball.radius * 2);
+            }
+            
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Physics_Simulation__Create_Task_
 {
-    internal class Block
+    public class Block
     {
         public Vector2 position;
         public Vector2 size;

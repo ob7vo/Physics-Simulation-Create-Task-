@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,13 +9,13 @@ namespace Physics_Simulation__Create_Task_
 {
     //const float BALL_RADIUS = 3;
 
-    internal class Ball
+    public class Ball
     {
-        Vector2 position = new Vector2(0,0);
-        Vector2 velocity = new Vector2(0,0);
+        public Vector2 position { get; private set; } = new Vector2(0, 0);
+        public Vector2 velocity = new Vector2(0,0);
 
-        float radius = 5.f;
-        float mass = 3.f;
+        public float radius { get; private set; } = 5.0f;
+        public float mass { get; private set; } = 3.0f;
 
         bool grounded = false;
 
@@ -34,7 +35,8 @@ namespace Physics_Simulation__Create_Task_
 
             // Mass isn't needed for gravity acceleration since its cancelled out
             // Fg = mg -> a = F / m -> a = (m)g / (m) -> a = g.
-            velocity.y -= gravity * deltaTime;
+            if (!grounded)
+                velocity.y -= gravity * deltaTime;
 
             position += velocity * deltaTime;
         }
@@ -59,7 +61,10 @@ namespace Physics_Simulation__Create_Task_
         }
         public void ResolveCollision(Block block)
         {
-            // I dont know how to get contact point
+            // will set ground to true of the ball hit the top of the block 
+            CheckIfGrounded(block);
+
+            // I don't know how to get contact point
             Vector2 contactPoint = new Vector2(0,0);
 
             Vector2 direction = (position - contactPoint).Normalize();
@@ -69,9 +74,14 @@ namespace Physics_Simulation__Create_Task_
                 velocity.x *= -1;
             if (Math.Sign(direction.y) != Math.Sign(velocity.y))
                 velocity.y *= -1;
+
+            float bottomOfBall = position.y - radius;
+            float topOfBlock = block.position.y + (block.size.y * 0.5f);
+            bool fromAbove = bottomOfBall <= topOfBlock;
         }
         public void ResolveCollision(Ball ball2)
         {
+            
             // Collision is resolved via Elastic Collision (both move in opposite directions)
             // Get the direction between the balls
             Vector2 normal = (ball2.position - this.position);
@@ -110,5 +120,7 @@ namespace Physics_Simulation__Create_Task_
             float halfWidth = block.size.x * 0.5f;
             float overlapX = (radius + position.x);
         }
+
+        public bool CheckIfGrounded(Block block) => grounded = (position.y - radius) > block.position.y + block.size.y * 0.5f;   
     }
 }
