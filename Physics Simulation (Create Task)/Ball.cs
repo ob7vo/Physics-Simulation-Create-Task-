@@ -11,6 +11,8 @@ namespace Physics_Simulation__Create_Task_
 
     public class Ball
     {
+        const float SKIN_WIDTH = 0.025f;
+        
         public Vector2 position { get; private set; } = new Vector2(0, 0);
         public Vector2 velocity = new Vector2(0,0);
 
@@ -121,6 +123,6 @@ namespace Physics_Simulation__Create_Task_
             float overlapX = (radius + position.x);
         }
 
-        public bool CheckIfGrounded(Block block) => grounded = (position.y - radius) > block.position.y + block.size.y * 0.5f;   
+        public bool CheckIfGrounded(Block block) => grounded = (position.y - radius - SKIN_WIDTH) > block.position.y + block.size.y * 0.5f;   
     }
 }
