@@ -20,6 +20,7 @@ namespace Physics_Simulation__Create_Task_
         public float mass { get; private set; } = 3.0f;
 
         bool grounded = false;
+        float frictionCoefficient = 0.f; // The "Mu" value of the block the ball is currently on
 
         public Ball(Vector2 position, Vector2 velocity, float radius, float mass)
         {
@@ -30,15 +31,26 @@ namespace Physics_Simulation__Create_Task_
         }
         public Ball() { }
 
-        public void Move(float deltaTime, float gravity)
+        public void Move(float deltaTime)
         {
             // DeltaTime is essential to have consistency regardless of framerate
             // DeltaTime is used fro bth acceleration and adding velocity, since these happen OVER TIME
 
             // Mass isn't needed for gravity acceleration since its cancelled out
             // Fg = mg -> a = F / m -> a = (m)g / (m) -> a = g.
-            if (!grounded)
-                velocity.y -= gravity * deltaTime;
+            if (!grounded) {
+                velocity.y -= GameConfig.Gravity * deltaTime;
+                velocity -= velocity * GameConfig.AirDrag * deltaTime;
+            } else {
+                // Apply friction when grounded
+                // Force of gravity equation. Mass gets cancelled out. ((mu * m * g) / m = a)
+                float frictionDecel = frictionCoefficient * GameConfig.Gravity * deltaTime;
+                // Clamp so friction doesn't reverse the ball's direction
+                if (Math.Abs(velocity.x) <= frictionDecel)
+                    velocity.x = 0;
+                else
+                    velocity.x -= Math.Sign(velocity.x) * frictionDecel; // Get the Sign so it always deccelerate in the opposite direction
+            }
 
             position += velocity * deltaTime;
         }
@@ -47,10 +59,6 @@ namespace Physics_Simulation__Create_Task_
             return Vector2.Distance(this.position, ball2.position) <= (this.radius + ball2.radius);
         }
         public bool Collides(Block block)
-        {
-            float halfW = block.size.x * 0.5f;
-            float halfH = block.size.y * 0.5f;
-
             // Get the sides the the circle is closest to.
             float closestX = Math.Clamp(position.x, block.position.x - halfW, block.position.x + halfW);
             float closestY = Math.Clamp(position.y, block.position.y - halfH, block.position.y + halfH);
