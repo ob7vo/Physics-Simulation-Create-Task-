@@ -13,9 +13,6 @@ namespace Physics_Simulation__Create_Task_
         private Vector2 ballLaunchVelocity = new Vector2(5,5); // Velocity balls get when spawned
         private Vector2 lastMousePos = new Vector2(0,0); // The mouse position last frame. Used fro getting mouse velocity
         private Vector2 lastClickPos = new Vector2(0,0); // The mouse position when it last clicked. Used for sizing blocks;
-        private bool useMouseVelocity = false; // if true, the spawn velocity fro balls with use the mouse, and not ballLaunhVelocity
-
-        float gravity = 3.0f;
 
         // Configurations for the next ball to be spawned
         float nextRadius = 0;
@@ -35,11 +32,11 @@ namespace Physics_Simulation__Create_Task_
             // Process the active balls to make them move and collide
             foreach (Ball ball in balls) {
                 // Move them first before checking collision, necessary fro accurate collision)
-                ball.Move(dt, gravity);
+                ball.Move(dt);
 
                 // Check Collision with walls first before balls (arbitrary order I chose)
                 foreach (Block block in blocks) {
-                    if (ball.Collides(block))
+                    if (ball.Collides(block)) 
                         ball.ResolveCollision(block);
                 }
 
@@ -51,7 +48,7 @@ namespace Physics_Simulation__Create_Task_
                 }
             }
         }
-        public void SpawnBall(Vector2 mousePos, int newRadius, int newMass) {
+        public void SpawnBall(Vector2 mousePos) {
             // Called on mouse press and spawns on the mouse
             // Return if there are no Balls left
             if (!IsAvailableBall() || !IsValidBallSpawnPosition()) return;
@@ -101,5 +98,15 @@ namespace Physics_Simulation__Create_Task_
             }
             
         }
+    }
+
+    // Settings of the game, which includes stats for objects.
+    public static class GameConfig {
+        // Settings for balls
+        public static float Gravity = 3.0f;
+        public static float AirDrag = 2.5f;
+        public static bool UseMouseVelocity = false;
+        public static int MaxBalls { get; private set; } = 100;
+        public static int MaxBlocks { get; private set; } = 15;
     }
 }
