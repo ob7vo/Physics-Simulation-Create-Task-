@@ -93,10 +93,10 @@ namespace Physics_Simulation__Create_Task_
         }
         public void ResolveCollision(Block block)
         {
-            FixOverlap(block);
+        //    FixOverlap(block);
 
             Vector2 contactPoint = block.GetContactPoints(this);
-            Vector2 normal = block.GetCollisionNormal(block, contactPoint);
+            Vector2 normal = (position - contanctPoint).Normalize();
 
             // Reflect only along the normal axis
             float sepVel = Vector2.Dot(velocity, normal);
@@ -106,6 +106,7 @@ namespace Physics_Simulation__Create_Task_
 
             // Set grounded state and fix overlaps afterwards
             CheckIfGrounded(block);
+            FixOverlap(block);
         }
         public void ResolveCollision(Ball ball2)
         {
