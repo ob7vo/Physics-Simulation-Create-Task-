@@ -17,17 +17,17 @@ namespace Physics_Simulation__Create_Task_
 
         public const float EPSILON = 1e-6f; // standard epsilon value
         static readonly Vector2 zero = new Vector2(0, 0);
-        public float Magnitude()
-        {
-            // Gets the magnitude of this vector
-            // Needed for normalizing a vector to get directions
-            return (float)Math.Sqrt((x * x) + (y * y));
-        }
+
+        // Gets the magnitude of this vector
+        // Needed for normalizing a vector to get directions
+        public float Magnitude => (float)Math.Sqrt((x * x) + (y * y));
+        public float SqrMagnitude => (x* x + y * y);
+
         public Vector2 Normalize()
         {
             // Normalize the vector
             // Essential for getting the direction of/between vectors
-            float mag = Magnitude();
+            float mag = Magnitude;
 
             // Epsilon is needed to prevent "divide by 0" errors
             if (mag > EPSILON)
@@ -52,11 +52,25 @@ namespace Physics_Simulation__Create_Task_
             float diff_y = a.y - b.y;
             return (float)Math.Sqrt(diff_x * diff_x + diff_y * diff_y);
         }
-        public static float Dot(Vector2 lhs, Vector2 rhs)
+        public static float Dot(Vector2 v1, Vector2 v2)
         {
             // Gets how much two vectors point at each other
-            // Needed fro vector projection, which is important for collision response (relatie velocity)
-            return lhs.x * rhs.x + lhs.y * rhs.y;
+            // Needed fro vector projection, which is important for collision response (relative velocity)
+            return (v1.x * v2.x) + (v1.y * v2.y);
+        }
+        // Not sure if I'll use this
+        public static float Angle(Vector2 v1, Vector2 v2)
+        {
+            const float Rad2Deg = 180f / MathF.PI;
+            const float kEpsilonNormalSqrt = 1e-15f;
+
+            // Use SqrMagnitude to save on Calling Math.Sqrt (once instead of twice with Magnitude)
+            float lengthProduct = MathF.Sqrt(v1.SqrMagnitude * v2.SqrMagnitude);
+            if (lengthProduct < kEpsilonNormalSqrt)
+                return  0.0f;
+
+            float dot = Math.Clamp(Vector2.Dot(v1, v2) / lengthProduct, -1.0f, 1.0f);
+            return MathF.Acos(dot) * Rad2Deg;
         }
         // Gets a random Vector2 between the x & y values of two vectors
         // This assumes that both components of v1 are less than v2
@@ -66,14 +80,18 @@ namespace Physics_Simulation__Create_Task_
             float y = v1.y + Random.Shared.NextSingle() * (v2.y - v1.y);
             return new Vector2(x, y);
         }
-
+        // Converts different classes, structs, or variables into Vector2.
+        // I only have Point for now, may add more but likely not
+        public static Vector2 Convert(Point point) => new Vector2(point.X, point.Y);
+        
         // Operation implementation to make math easier and shorter.
-        public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.y, a.y + b.y);
+        public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);
         public static Vector2 operator -(Vector2 a, Vector2 b) => new Vector2(a.x - b.x, a.y - b.y);
         public static Vector2 operator *(Vector2 a, float s) => new Vector2(a.x * s, a.y * s);
         public static Vector2 operator *(float s, Vector2 a) => a * s;
         public static Vector2 operator /(Vector2 a, float s) => new Vector2(a.x / s, a.y / s);
-        public static bool operator ==(Vector2 a, Vector2 b) => a.x == b.y && a.x == b.y;
-        public static bool operator !=(Vector2 a, Vector2 b) => !(a == b);
+
+        public override string ToString() => $"({x}, {y})";
+        
     }
 }
