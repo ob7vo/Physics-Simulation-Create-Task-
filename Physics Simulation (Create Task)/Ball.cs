@@ -14,13 +14,11 @@ namespace Physics_Simulation__Create_Task_
     {
         const float SKIN_WIDTH = 0.025f;
         static readonly float[] MIN_MAX_RADIUS = { 10.0f, 20.0f };
-        static readonly float[] MIN_MAX_MASS = { 1.0f, 2.5f };
-        static readonly float[] MIN_MAX_RESTITUTION = { 0.9f, 1.0f };
+        static readonly float[] MIN_MAX_MASS = { 1.0f, 2.5f }; // Set low so its more reliant on radius
+        static readonly float[] MIN_MAX_RESTITUTION = { 0.3f, 0.5f };
 
         public Vector2 position = new Vector2(0, 0);
         public Vector2 velocity = new Vector2(0,0);
-
-        int ticks = 0;
 
         public float radius { get; private set; } = 5.0f;
         public float mass { get; private set; } = 3.0f;
@@ -30,7 +28,7 @@ namespace Physics_Simulation__Create_Task_
         private float curFrictionCoefficient = 0.0f; // The "Mu" value of the block the ball is currently on
 
         public readonly Color color = Color.White;
-
+        
         public Ball(Vector2 position, Vector2 velocity)
         {
             this.position = position;
@@ -72,7 +70,6 @@ namespace Physics_Simulation__Create_Task_
 
             //Debug.WriteLine(velocity.ToString() + " -> Velocity");
             //Debug.WriteLine(position.ToString() + " -> Position");
-
         }
         public bool Collides(Vector2 point) => Vector2.Distance(this.position, point) <= this.radius;
         public bool Collides(Ball ball2)
@@ -91,18 +88,25 @@ namespace Physics_Simulation__Create_Task_
             // Distance check but without the Math.Sqrt() so it's faster
             return (distX * distX + distY * distY) <= (radius * radius);
         }
+        public bool Collides(Rectangle screenBounds)
+        {
+            return Left < screenBounds.Left || Right > screenBounds.Right ||
+                Top < screenBounds.Top || Bottom > screenBounds.Bottom;
+        }
         public void ResolveCollision(Block block)
         {
-        //    FixOverlap(block);
-
+            Vector2 oldVel = velocity; // To write on Debug
+           
             Vector2 contactPoint = block.GetContactPoints(this);
-            Vector2 normal = (position - contanctPoint).Normalize();
+            Vector2 normal = (position - contactPoint).Normalize();
 
-            // Reflect only along the normal axis
+            // Use Relative Velocity Reversal theorem.
             float sepVel = Vector2.Dot(velocity, normal);
             if (sepVel < 0) // only resolve if moving toward the block
                 velocity -= (1 + restitution) * sepVel * normal;
 
+          //  Debug.WriteLine(oldVel.ToString() + " -> Old Velocity -----" +
+           //     velocity.ToString() + " -> New Velocity");
 
             // Set grounded state and fix overlaps afterwards
             CheckIfGrounded(block);
@@ -112,7 +116,7 @@ namespace Physics_Simulation__Create_Task_
         {
             // Collision is resolved via Elastic Collision (both move in opposite directions)
             // Get the direction between the balls
-            Vector2 normal = (ball2.position - this.position);
+            Vector2 normal = (this.position - ball2.position);
             normal.Normalize();
 
             // The velocity of this ball in reference to teh other
@@ -123,7 +127,11 @@ namespace Physics_Simulation__Create_Task_
 
             // Speed being positive means the balls are moving away from each other
             // Resolving the collision then would just pull them back
-            if (seperationVelocity > 0) return;
+            if (seperationVelocity > 0)
+            {
+               // Debug.WriteLine("Moving AWAY");
+                return;
+            }
 
             // Average the elasticity between the two (could do min(), but I like this more)
             float elasticity = (this.restitution + ball2.restitution) * 0.5f;
@@ -148,11 +156,48 @@ namespace Physics_Simulation__Create_Task_
             // The balls will be overlapping, which would cause problems
             FixOverlap(ball2, normal);
         }
+        public void ResolveCollision(Rectangle screenBounds)
+        {
+            if (GameConfig.BallBorderBehavior == BorderBehavior.Wrap)
+            {
+                // When wrapping the ball, I move it by some of its velocity to avoid it immediately wrapping-around again
+                if (Left < screenBounds.Left)
+                    position.x = screenBounds.Right - radius;
+                else if (Right > screenBounds.Right)
+                    position.x = screenBounds.Left + radius;
+                else if (Top < screenBounds.Top)
+                    position.y = screenBounds.Bottom - radius;
+                else if (Bottom > screenBounds.Bottom)
+                    position.y = screenBounds.Top + radius;
+            }
+            // Bounce
+            else
+            {
+                Vector2 contactPoint = new Vector2(
+                    Math.Clamp(position.x, screenBounds.Left, screenBounds.Right),
+                    Math.Clamp(position.y, screenBounds.Top, screenBounds.Bottom)
+                );
+                Vector2 normal = (position - contactPoint).Normalize();
+
+                // Use Relative Velocity Reversal theorem.
+                float sepVel = Vector2.Dot(velocity, normal);
+                if (sepVel < 0) // only resolve if moving toward the block
+                    velocity -= (1 + restitution) * sepVel * normal;
+
+                FixOverlap(screenBounds);
+            }
+        }
         public void FixOverlap(Ball ball2, Vector2 normal)
         {
             // Remove any overlap between the two
-            float overlap = (this.radius + ball2.radius) - Vector2.Distance(this.position, ball2.position);
+            float totalRadius = this.radius + ball2.radius;
+            float overlap = (totalRadius) - Vector2.Distance(this.position, ball2.position);
 
+            // I create ratios so that teh balls are move accordingly to their size
+            // Bigger balls will have to move out less
+           // float ratio1 = this.radius / totalRadius;
+           // float ratio2 = 1 - ratio1;
+            
             this.position -= normal * (overlap * 0.5f);
             ball2.position += normal * (overlap * 0.5f);
         }
@@ -166,7 +211,18 @@ namespace Physics_Simulation__Create_Task_
             else
                 position.y += overlapY * Math.Sign(position.y - block.position.y);
         }
+        public void FixOverlap(Rectangle screenBounds)
+        {
+            if (Left < screenBounds.Left)
+                position.x = screenBounds.Left + (radius + SKIN_WIDTH);
+            else if (Right > screenBounds.Right)
+                position.x = screenBounds.Right - (radius + SKIN_WIDTH);
 
+            if (Top < screenBounds.Top)
+                position.y = screenBounds.Top + (radius + SKIN_WIDTH);
+            else if (Bottom > screenBounds.Bottom)
+                position.y = screenBounds.Bottom - (radius + SKIN_WIDTH);
+        }
         public bool CheckIfGrounded(Block block)
         {
             if (Bottom - SKIN_WIDTH > block.Top)

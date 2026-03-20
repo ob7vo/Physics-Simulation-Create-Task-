@@ -16,7 +16,7 @@ namespace Physics_Simulation__Create_Task_
         public Vector2(float x, float y) { this.x = x; this.y = y; }
 
         public const float EPSILON = 1e-6f; // standard epsilon value
-        static readonly Vector2 zero = new Vector2(0, 0);
+        public static readonly Vector2 zero = new Vector2(0, 0);
 
         // Gets the magnitude of this vector
         // Needed for normalizing a vector to get directions
@@ -90,7 +90,6 @@ namespace Physics_Simulation__Create_Task_
         public static Vector2 operator *(Vector2 a, float s) => new Vector2(a.x * s, a.y * s);
         public static Vector2 operator *(float s, Vector2 a) => a * s;
         public static Vector2 operator /(Vector2 a, float s) => new Vector2(a.x / s, a.y / s);
-
         public override string ToString() => $"({x}, {y})";
         
     }

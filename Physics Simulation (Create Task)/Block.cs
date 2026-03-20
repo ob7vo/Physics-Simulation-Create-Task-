@@ -9,15 +9,15 @@ namespace Physics_Simulation__Create_Task_
 {
     public class Block
     {
-        static readonly float[] MIN_MAX_FRICTION_COEFFICIENT = { 0.05f, 0.3f };
+        static readonly float[] MIN_MAX_FRICTION_COEFFICIENT = { 0.05f, 0.95f };
 
         public Vector2 position = new Vector2(); 
         public Vector2 size = new Vector2();
         public Rectangle rect = new Rectangle(); // Cached rect to avoid making one every frame to draw it
-
+        
         public float frictionCoefficient = 0.0f;
 
-        public readonly Color color = Color.Red;
+        public readonly Color color = Color.White;
 
         public Block(Vector2 pos, Vector2 size)
         {
@@ -28,7 +28,16 @@ namespace Physics_Simulation__Create_Task_
             rect = new Rectangle((int)Math.Round(Left), (int)Math.Round(Top), (int)Math.Round(size.x), (int)Math.Round(size.y));
             color = Utility.RandomizeColor();
         }
+        // This construtcotr is purely for the previewBlock
+        public Block() => color = Color.FromArgb(100, 255, 255, 255);
+        
         public void SetRect() => rect = new Rectangle((int)Math.Round(Left), (int)Math.Round(Top), (int)Math.Round(size.x), (int)Math.Round(size.y));
+        public void SetRectFromMousePosition(Vector2 lastClickPos, Vector2 mousePos)
+        {
+            size = (lastClickPos - mousePos).Abs();
+            position = (lastClickPos + mousePos) * 0.5f;
+            SetRect();
+        }
 
         public bool Collides(Vector2 point)
         {
