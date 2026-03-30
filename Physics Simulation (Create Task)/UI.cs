@@ -7,42 +7,69 @@ namespace Physics_Simulation__Create_Task_
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public class UI
     {
-        public Font arial = new Font("Arial", 7.5f, FontStyle.Bold);
-        public string nextSpawnObjectName = "Selected Object Type (Press Q to switch): Block";
-        public string destroyObjectsText = "Press W to destroy all objects of the selected type.";
-        public string borderBehaviorText = "Balls' behavior when hitting the screen border (Press B to switch): Destroy";
+        public Font arial = new Font("Arial", 10f, FontStyle.Bold);
+        public Font bigArial = new Font("Arial", 20f, FontStyle.Bold);
+
+        public string nextSpawnObjectName = "Selected Object (Q to switch, Click to spawn): Block";
+        public string destroyObjectsText = "Destroy all Blocks (Press W)";
+        public string borderBehaviorText = "Balls' behavior when hitting the screen border (B): Destroy";
         public string velocityText = "";
+        public string autoSpawnText = "Auto Ball Spawn Timer: OFF (Press E to turn on/off, press A/D to adjust timer)";
         public string fpsText = "";
 
-        public PointF[] textPositions = new PointF[5];
+        public string inputText = "Last Input: NONE";
+
+        public PointF[] textPositions = new PointF[6];
+        public PointF inputTextPosition = new PointF();
         public UI(Rectangle screenBorder)
         {
             for (int i = 0; i < textPositions.Length; i++)
             {
-                textPositions[i].X = screenBorder.X + screenBorder.Width * 0.1f;
-                textPositions[i].Y = screenBorder.Y + screenBorder.Height * (0.08f * (i + 1));
+                textPositions[i].X = screenBorder.X + screenBorder.Width * 0.04f;
+                textPositions[i].Y = screenBorder.Y + screenBorder.Height * (0.02f * (i + 1));
             }
+
+            inputTextPosition.X = screenBorder.X + (screenBorder.Width * 0.7f);
+            inputTextPosition.Y = screenBorder.Y + (screenBorder.Height * 0.075f);
         }
 
         public void ChangeSpawnText(SpawnNext next)
         {
-            nextSpawnObjectName = "Selected Object Type (Press Q to switch): " + next.ToString();
+            nextSpawnObjectName = "Selected Object (Q to switch, Click to spawn): " + next.ToString();
+            destroyObjectsText = "Destroy all " + next.ToString() + "s with (W)";
         }
         public void ChangeBorderBehaviorText(BorderBehavior behavior)
         {
-            borderBehaviorText = "Balls' behavior when hitting the screen border (Press B to switch): " + behavior.ToString();
+            borderBehaviorText = "Balls' behavior when hitting the screen border (B): " + behavior.ToString();
         }
         public void SetVelocityText(Vector2 newVel)
         {
-            velocityText = "Ball Launch Velocity (Change with arrow keys, press space switch): " + newVel.ToString();
+            velocityText = "Ball Launch Velocity (Arrow Keys or Space): " + newVel.ToString();
         }
         public void SetVelocityText(Vector2 lastMousePos, Vector2 newMousePos)
         {
-            velocityText = "Ball Launch Velocity (Using the mouse, press space to switch): " + (newMousePos - lastMousePos).ToString();
+            velocityText = "Mouse Velocity (Space): " + (newMousePos - lastMousePos).ToString();
         }
         public void SetFPSText(float dt)
         {
             fpsText = $"FPS: {1 / dt:F0}";
+        }
+        public void SetInputText(Keys key)
+        {
+            inputText = "Last Input: " + key.ToString();
+        }
+        public void SetInputText(bool mouseDown)
+        {
+            inputText = "Last Input: " + (mouseDown ? "Mouse Press" : "Mouse Release");
+        }
+        public void SetAutoSpawnText(bool autoSpawn)
+        {
+            string onOff = autoSpawn ? "ON" : "OFF";
+            autoSpawnText = $"Auto Ball Spawn Timer: {onOff} (Press E to turn on/off, press A/D to adjust timer)";
+        }
+        public void SetAutoSpawnText()
+        {
+            autoSpawnText = $"Auto Ball Spawn Timer: {GameConfig.BallAutoSpawnTimer} (Press E to turn on/off, press A/D to adjust timer)";
         }
     }
 }

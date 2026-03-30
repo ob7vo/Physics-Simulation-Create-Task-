@@ -13,12 +13,15 @@ namespace Physics_Simulation__Create_Task_
     public class Ball
     {
         const float SKIN_WIDTH = 0.025f;
-        static readonly float[] MIN_MAX_RADIUS = { 10.0f, 20.0f };
+        public static readonly float[] MIN_MAX_RADIUS = { 10.0f, 20.0f };
         static readonly float[] MIN_MAX_MASS = { 1.0f, 2.5f }; // Set low so its more reliant on radius
         static readonly float[] MIN_MAX_RESTITUTION = { 0.3f, 0.5f };
 
+        // Instead of having a velocity Vector, I store the current adn last positions
+        // I get velocity using Verlet Integration (Vel =  (Pos - lastPos))
+        // I tried both, and Verlet Integration was far, far superior for accurate and consistent collisions
         public Vector2 position = new Vector2(0, 0);
-        public Vector2 velocity = new Vector2(0,0);
+        public Vector2 lastPosition = new Vector2(0,0);
 
         public float radius { get; private set; } = 5.0f;
         public float mass { get; private set; } = 3.0f;
@@ -29,12 +32,12 @@ namespace Physics_Simulation__Create_Task_
 
         public readonly Color color = Color.White;
         
-        public Ball(Vector2 position, Vector2 velocity)
+        public Ball(Vector2 position, Vector2 velocity, float radius)
         {
             this.position = position;
-            this.velocity = velocity;
+            this.lastPosition = position - velocity * GameConfig.FixedDeltaTime;
 
-            this.radius = Utility.RandomLerp(MIN_MAX_RADIUS);
+            this.radius = radius;
             this.mass = radius * Utility.RandomLerp(MIN_MAX_MASS);
             this.restitution = Utility.RandomLerp(MIN_MAX_RESTITUTION);
 
@@ -45,121 +48,103 @@ namespace Physics_Simulation__Create_Task_
 
         public void Move(float deltaTime)
         {
+            Vector2 oldPosition = position;
             // DeltaTime is essential to have consistency regardless of framerate
             // DeltaTime is used fro bth acceleration and adding velocity, since these happen OVER TIME
 
             // Mass isn't needed for gravity acceleration since its cancelled out
-            // Fg = mg -> a = F / m -> a = (m)g / (m) -> a = g.
+            // Combine simplified AirDrag and Gravity into one line
             if (!grounded) {
-                velocity.y += (GameConfig.Gravity * deltaTime);
-                velocity -= velocity * GameConfig.AirDrag * deltaTime; // Very simplified Air drag formula
+             //   Debug.WriteLine("POS - " + position.ToString());
+                position += Velocity + (GameConfig.Gravity - Velocity * GameConfig.AirDrag) * (deltaTime * deltaTime);
+             //   Debug.WriteLine("POS AFTER GRAVITY - " + position.ToString());
             } 
             else {
-                // Apply friction when grounded
-                // Force of gravity equation. Mass gets cancelled out. ((mu * m * g) / m = a)
-                float frictionDecel = curFrictionCoefficient * GameConfig.Gravity * deltaTime;
+                // Applying friction
+                Vector2 implicitVelocity = Velocity;
+                // Equation for acceleration from Force of Friction (Mass is cancelled out again)
+                float frictionDecel = curFrictionCoefficient * GameConfig.Gravity.y * deltaTime * deltaTime;
 
-                // Use absolute value and minimize at 0 friction doesn't reverse the ball's direction
-                if (Math.Abs(velocity.x) <= frictionDecel)
-                    velocity.x = 0;
-                else
-                    velocity.x -= Math.Sign(velocity.x) * frictionDecel; // Get the Sign so it always deccelerate in the opposite direction
+                // Set the velocity to 0 when approaching small values.
+                if (Math.Abs(implicitVelocity.x) <= frictionDecel)
+                    implicitVelocity.x = 0;
+                else // Reduce the velocity by the acceleration of friction (I use Sign so it wont reverse)
+                    implicitVelocity.x -= Math.Sign(implicitVelocity.x) * frictionDecel;
+
+                position += implicitVelocity; // No acceleration when grounded
             }
 
-            position += velocity * deltaTime;
-
-            //Debug.WriteLine(velocity.ToString() + " -> Velocity");
-            //Debug.WriteLine(position.ToString() + " -> Position");
+            lastPosition = oldPosition;
         }
-        public bool Collides(Vector2 point) => Vector2.Distance(this.position, point) <= this.radius;
-        public bool Collides(Ball ball2)
+        public bool SolveCollision(Ball ball2){
+            const float EPSILON = 1e-6f; // standard epsilon value
+
+            Vector2 dir = this.position - ball2.position;
+            float sqrDist = dir.x * dir.x + dir.y * dir.y;
+
+            float totalRadius = this.radius + ball2.radius;
+            if (sqrDist <= totalRadius * totalRadius && sqrDist > EPSILON)
+            {
+                float dist = (float)Math.Sqrt(sqrDist);
+                float push = (totalRadius - dist) * 0.5f;
+                float res = (this.restitution + ball2.restitution) * 0.5f;
+
+                // normal * (1/2 overlap) * restitution
+                Vector2 collisionVelocity = (dir / dist) * push * res;
+
+                this.position += collisionVelocity;
+                ball2.position -= collisionVelocity;
+
+                return true;
+            }
+
+            return false;
+        }
+        public bool SolveCollision(Block block)
         {
-            return Vector2.Distance(this.position, ball2.position) <= (this.radius + ball2.radius);
-        }
-        public bool Collides(Block block)
-        { 
             // Get the sides the the circle is closest to.
-            float closestX = Math.Clamp(position.x, block.Left, block.Right);
-            float closestY = Math.Clamp(position.y, block.Top, block.Bottom);
-
-            float distX = position.x - closestX;
-            float distY = position.y - closestY;
+            Vector2 contactPoints = new Vector2(
+                Math.Clamp(position.x, block.Left, block.Right),
+                Math.Clamp(position.y, block.Top, block.Bottom)
+            );
+            Vector2 dist = position - contactPoints;
 
             // Distance check but without the Math.Sqrt() so it's faster
-            return (distX * distX + distY * distY) <= (radius * radius);
+            if (dist.SqrMagnitude <= (radius * radius)) {
+                Vector2 normal = dist.Normalize();
+
+                if (Math.Abs(normal.x) > Math.Abs(normal.y))
+                    normal = new Vector2(Math.Sign(normal.x), 0);
+                else
+                    normal = new Vector2(0, Math.Sign(normal.y));
+
+                // Use Relative Velocity Reversal theorem. 
+                float sepVel = Vector2.Dot(Velocity, normal);
+                if (sepVel < 0) // only resolve if moving toward the block
+                    lastPosition = position - (Velocity - ((1 + restitution) * sepVel * normal));
+
+                // Set grounded state and fix overlaps afterwards
+                CheckIfGrounded(block);
+                FixOverlap(block);
+
+                return true;
+            }
+
+            return false;
         }
         public bool Collides(Rectangle screenBounds)
         {
             return Left < screenBounds.Left || Right > screenBounds.Right ||
                 Top < screenBounds.Top || Bottom > screenBounds.Bottom;
         }
-        public void ResolveCollision(Block block)
-        {
-            Vector2 oldVel = velocity; // To write on Debug
-           
-            Vector2 contactPoint = block.GetContactPoints(this);
-            Vector2 normal = (position - contactPoint).Normalize();
-
-            // Use Relative Velocity Reversal theorem.
-            float sepVel = Vector2.Dot(velocity, normal);
-            if (sepVel < 0) // only resolve if moving toward the block
-                velocity -= (1 + restitution) * sepVel * normal;
-
-          //  Debug.WriteLine(oldVel.ToString() + " -> Old Velocity -----" +
-           //     velocity.ToString() + " -> New Velocity");
-
-            // Set grounded state and fix overlaps afterwards
-            CheckIfGrounded(block);
-            FixOverlap(block);
-        }
-        public void ResolveCollision(Ball ball2)
-        {
-            // Collision is resolved via Elastic Collision (both move in opposite directions)
-            // Get the direction between the balls
-            Vector2 normal = (this.position - ball2.position);
-            normal.Normalize();
-
-            // The velocity of this ball in reference to teh other
-            Vector2 relVel = this.velocity - ball2.velocity;
-            // Only the speed on the axis of direction is needed
-            // Using Dot product projects relative velocity onto the normal
-            float seperationVelocity = Vector2.Dot(relVel, normal);
-
-            // Speed being positive means the balls are moving away from each other
-            // Resolving the collision then would just pull them back
-            if (seperationVelocity > 0)
-            {
-               // Debug.WriteLine("Moving AWAY");
-                return;
-            }
-
-            // Average the elasticity between the two (could do min(), but I like this more)
-            float elasticity = (this.restitution + ball2.restitution) * 0.5f;
-
-            // The final velocities are found using both Conservation of Momentum and Relative Velocity Reversal equations
-            // CoM Formula: m1v1 + m2v2 = m1v1' + m2v2'
-            // RVR Formula: v1 - v2 = -(v1'-v2')
-            // Solve: Delta(v1 or v2)* = V1(m1-m2)+((2*m(1or2)*V(1or2))
-            //                           ------------------------------ * ((v1 - v2) * n) * n))
-            //                                      (m1+m2))                                   
-            // n is the normal direction, and ((v1 - v2) * n) * n)) is the speed variable.
-            // the 2 is (1 + e) where e = 1, which would be perfectly elastic. Adding restitution allows the value to change
-
-            // Instead of just inputting the equation into both velocities, chaning them to DELTAVelocity equations and
-            // creating this impulse float will save some computations, making this all faster
-            float impulse = ((1 + elasticity) * seperationVelocity) / (this.mass + ball2.mass);
-
-            // Add and Substract the different results so that the balls go in opposite directions
-            this.velocity -= normal * (impulse * ball2.mass);
-            ball2.velocity += normal * (impulse * this.mass);
-
-            // The balls will be overlapping, which would cause problems
-            FixOverlap(ball2, normal);
-        }
         public void ResolveCollision(Rectangle screenBounds)
         {
+            // Wrap around
             if (GameConfig.BallBorderBehavior == BorderBehavior.Wrap)
             {
+                // Velocity when at the other side of the wall
+                Vector2 oldVelocity = Velocity;
+
                 // When wrapping the ball, I move it by some of its velocity to avoid it immediately wrapping-around again
                 if (Left < screenBounds.Left)
                     position.x = screenBounds.Right - radius;
@@ -169,23 +154,25 @@ namespace Physics_Simulation__Create_Task_
                     position.y = screenBounds.Bottom - radius;
                 else if (Bottom > screenBounds.Bottom)
                     position.y = screenBounds.Top + radius;
+
+                // Old Velocity is used here so the ball wont get insane Velocity value when wrapped to the other side
+                lastPosition = position - oldVelocity;
             }
             // Bounce
             else
             {
-                Vector2 contactPoint = new Vector2(
-                    Math.Clamp(position.x, screenBounds.Left, screenBounds.Right),
-                    Math.Clamp(position.y, screenBounds.Top, screenBounds.Bottom)
-                );
-                Vector2 normal = (position - contactPoint).Normalize();
+                Vector2 vel = Velocity;
 
-                // Use Relative Velocity Reversal theorem.
-                float sepVel = Vector2.Dot(velocity, normal);
-                if (sepVel < 0) // only resolve if moving toward the block
-                    velocity -= (1 + restitution) * sepVel * normal;
+                if (Left < screenBounds.Left || Right > screenBounds.Right)
+                   vel.x *= -restitution;
 
+                if (Top < screenBounds.Top || Bottom > screenBounds.Bottom)
+                    vel.y *= -restitution;
+
+                lastPosition = position - vel;
                 FixOverlap(screenBounds);
             }
+  
         }
         public void FixOverlap(Ball ball2, Vector2 normal)
         {
@@ -195,11 +182,12 @@ namespace Physics_Simulation__Create_Task_
 
             // I create ratios so that teh balls are move accordingly to their size
             // Bigger balls will have to move out less
-           // float ratio1 = this.radius / totalRadius;
-           // float ratio2 = 1 - ratio1;
-            
-            this.position -= normal * (overlap * 0.5f);
-            ball2.position += normal * (overlap * 0.5f);
+            // float ratio1 = this.radius / totalRadius;
+            // float ratio2 = 1 - ratio1;
+
+            Vector2 adjustment = (normal * (overlap * 0.5f)).Add(SKIN_WIDTH);
+            this.position -= adjustment;
+            ball2.position += adjustment;
         }
         public void FixOverlap(Block block)
         {
@@ -207,9 +195,9 @@ namespace Physics_Simulation__Create_Task_
             float overlapY = (radius + block.HalfHeight) - Math.Abs(position.y - block.position.y);
 
             if (overlapX < overlapY)
-                position.x += overlapX * Math.Sign(position.x - block.position.x);
+                position.x += (overlapX * Math.Sign(position.x - block.position.x)) + SKIN_WIDTH;
             else
-                position.y += overlapY * Math.Sign(position.y - block.position.y);
+                position.y += (overlapY * Math.Sign(position.y - block.position.y)) + SKIN_WIDTH;
         }
         public void FixOverlap(Rectangle screenBounds)
         {
@@ -237,6 +225,7 @@ namespace Physics_Simulation__Create_Task_
             }
         }
 
+        public Vector2 Velocity => position - lastPosition;
         public float Top => position.y - radius;
         public float Bottom => position.y + radius;
         public float Left => position.x - radius;

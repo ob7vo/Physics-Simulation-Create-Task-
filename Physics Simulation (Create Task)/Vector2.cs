@@ -21,7 +21,7 @@ namespace Physics_Simulation__Create_Task_
         // Gets the magnitude of this vector
         // Needed for normalizing a vector to get directions
         public float Magnitude => (float)Math.Sqrt((x * x) + (y * y));
-        public float SqrMagnitude => (x* x + y * y);
+        public float SqrMagnitude => x * x + y * y;
 
         public Vector2 Normalize()
         {
@@ -83,6 +83,12 @@ namespace Physics_Simulation__Create_Task_
         // Converts different classes, structs, or variables into Vector2.
         // I only have Point for now, may add more but likely not
         public static Vector2 Convert(Point point) => new Vector2(point.X, point.Y);
+        public Vector2 Add(float a)
+        {
+            x += a;
+            y += a;
+            return this;
+        }
         
         // Operation implementation to make math easier and shorter.
         public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);

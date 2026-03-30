@@ -28,46 +28,22 @@ namespace Physics_Simulation__Create_Task_
             rect = new Rectangle((int)Math.Round(Left), (int)Math.Round(Top), (int)Math.Round(size.x), (int)Math.Round(size.y));
             color = Utility.RandomizeColor();
         }
-        // This construtcotr is purely for the previewBlock
+        // This constructor is purely for the previewBlock
         public Block() => color = Color.FromArgb(100, 255, 255, 255);
         
         public void SetRect() => rect = new Rectangle((int)Math.Round(Left), (int)Math.Round(Top), (int)Math.Round(size.x), (int)Math.Round(size.y));
-        public void SetRectFromMousePosition(Vector2 lastClickPos, Vector2 mousePos)
+        public void SetRectFromMousePosition(Vector2 lastClickPos, Vector2 mouseReleasePos)
         {
-            size = (lastClickPos - mousePos).Abs();
-            position = (lastClickPos + mousePos) * 0.5f;
+            // The block is the rectangle formed between the position from where the mouse was clicked and where it was relaesed
+            size = (lastClickPos - mouseReleasePos).Abs();
+            position = (lastClickPos + mouseReleasePos) * 0.5f;
             SetRect();
-        }
-
-        public bool Collides(Vector2 point)
-        {
-            return Bottom >= point.y &&
-                Top <= point.y &&
-                Right >= point.x &&
-                Left <= point.x;
-        }
-        public bool Collides(Block block2) {
-            return Bottom >= block2.Top &&
-                Top <= block2.Bottom &&
-                Right >= block2.Left &&
-                Left <= block2.Right;
         }
         public Vector2 GetContactPoints(Ball ball) {
             return new Vector2(
                 Math.Clamp(ball.position.x, Left, Right),
                 Math.Clamp(ball.position.y, Top, Bottom)
             );
-        }
-        public Vector2 GetCollisionNormal(Block block, Vector2 contactPoint)
-        {
-            // If contact point is on top or bottom, normal is vertical
-            // If contact point is on left or right, normal is horizontal
-            Vector2 diff = position - contactPoint;
-
-            if (Math.Abs(diff.x) > Math.Abs(diff.y))
-                return new Vector2(Math.Sign(diff.x), 0); // left or right wall
-            else
-                return new Vector2(0, Math.Sign(diff.y)); // top or bottom
         }
 
         public float Top => position.y - (size.y * 0.5f);

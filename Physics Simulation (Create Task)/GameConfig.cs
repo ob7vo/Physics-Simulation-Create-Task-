@@ -8,20 +8,19 @@ namespace Physics_Simulation__Create_Task_
     // Settings of the game, which includes stats for objects.
     public static class GameConfig
     {
-        // Settings for Blocks
-     
-
-        // Settings for balls
-        public static float Gravity = 40.0f;
+        public static Vector2 Gravity = new Vector2(0.0f, 40.0f);
         public static float AirDrag = 0.01f;
-        public static float ImpactLoss = 0.9f; // Multiplier for velocity lost on ball-to-block collision
+
         public static bool UseMouseVelocity = false;
-        public static float BallAutoSpawnTimer = 0.25f;
-        public static float PhysicsFixedTickTimer = 0.02f;
-        public static int PhysicsSubsteps = 6;
-        public static int CollisionIterations = 10;
+        public static float BallAutoSpawnTimer { get; set => field = Math.Max(value, 0.05f); } = 0.15f;
         public static BorderBehavior BallBorderBehavior = BorderBehavior.Destroy;
-       
+
+        public static float PhysicsFixedTickTimer = 0.02f;
+        public static int PhysicsSubsteps = 8;
+        public static float FixedDeltaTime = PhysicsFixedTickTimer / PhysicsSubsteps;
+
+        public static int CollisionIterations = 10;
+
         public static int MaxBalls { get; private set; } = 100;
         public static int MaxBlocks { get; private set; } = 15;
     }
